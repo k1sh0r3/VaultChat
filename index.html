@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaultChat — your documents, interrogated privately</title>
+<meta name="description" content="100% in-browser private RAG: upload PDFs and text, chat with them. Nothing leaves your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=1">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="vault-mark">◈</div>
+    <div>
+      <h1>VAULTCHAT</h1>
+      <span class="est">EST. 2026 · PRIVATE</span>
+    </div>
+  </div>
+  <span class="pill" id="model-pill">embedding model: pending</span>
+  <span class="badge-local">🔒 100% LOCAL — NOTHING LEAVES THIS BROWSER</span>
+</header>
+
+<main>
+  <aside>
+    <section class="panel">
+      <h2>DOCUMENTS · <span id="doc-count">0</span></h2>
+      <div id="dropzone" role="button" tabindex="0" aria-label="Upload documents">
+        <div style="font-size:1.6rem">🗂</div>
+        <div><strong>Drop PDFs / TXT / MD here</strong></div>
+        <div class="dim small">or click to browse — parsed on-device</div>
+      </div>
+      <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.markdown" hidden>
+      <div id="sample-list">
+        <p class="dim small" style="margin:0.6rem 0 0.2rem">No files handy? Load a sample:</p>
+        <button class="btn ghost">Employee Handbook</button>
+        <button class="btn ghost">Pollinator Survey Memo</button>
+        <button class="btn ghost">Founder's Letter Q3</button>
+      </div>
+      <hr class="double-rule">
+      <div id="doc-list"></div>
+      <p class="dim small">Untick a document to exclude it from retrieval.</p>
+    </section>
+
+    <section class="panel">
+      <h2>CHUNKING</h2>
+      <label>Strategy
+        <select id="chunker">
+          <option value="fixed">Fixed-size + overlap</option>
+          <option value="sentences">Sentence window</option>
+          <option value="paragraphs">Paragraph-based</option>
+        </select>
+      </label>
+      <label id="chunk-size-row">Chunk size
+        <select id="chunk-size">
+          <option value="256">256 chars</option>
+          <option value="512" selected>512 chars</option>
+          <option value="1024">1024 chars</option>
+        </select>
+      </label>
+      <p class="dim small">Applies to newly added documents.</p>
+    </section>
+
+    <section class="panel">
+      <h2>RETRIEVAL</h2>
+      <label>Top-k: <span id="k-val">4</span>
+        <input type="range" id="k" min="1" max="10" value="4">
+      </label>
+      <p class="dim small">Mode: <span class="pill" id="mode-pill">…</span></p>
+      <div id="model-progress" hidden><div id="model-bar"></div></div>
+      <div class="mode-note" id="mode-note" hidden>
+        Embeddings aren't loaded (first run downloads ~90MB, or you're offline) —
+        using honest keyword (BM25) retrieval instead. Nothing is faked.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>AI ANSWERS · OPTIONAL</h2>
+      <label>Provider
+        <select id="provider">
+          <option value="none">None — extractive mode</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="groq">Groq</option>
+          <option value="custom">Custom (OpenAI-compatible)</option>
+        </select>
+      </label>
+      <label>API key
+        <input type="password" id="api-key" placeholder="sk-…" autocomplete="off">
+      </label>
+      <div id="custom-fields" hidden>
+        <label>Base URL
+          <input type="url" id="custom-base" placeholder="https://openrouter.ai/api/v1" autocomplete="off" spellcheck="false">
+        </label>
+        <label>Model
+          <input type="text" id="custom-model" placeholder="e.g. deepseek/deepseek-chat" autocomplete="off" spellcheck="false">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btn-key-save">Save key</button>
+        <button class="btn ghost" id="btn-key-clear">Clear</button>
+      </div>
+      <p id="key-status" class="dim small" role="status"></p>
+      <p class="dim small">A key unlocks generated answers with citations. Keys stay in this browser's localStorage — never uploaded anywhere by us.</p>
+    </section>
+
+    <section class="panel danger-zone">
+      <h2>DANGER ZONE</h2>
+      <button class="btn ghost" id="btn-wipe">Wipe everything</button>
+      <p class="dim small">Deletes all documents, embeddings, keys, and the transcript from this browser.</p>
+    </section>
+  </aside>
+
+  <section class="panel" id="chat-panel">
+    <h2>INTERROGATION ROOM</h2>
+    <div id="messages" aria-live="polite"></div>
+    <div id="composer">
+      <textarea id="q" rows="2" placeholder="Ask about your documents… e.g. How much PTO do I accrue?"></textarea>
+      <button class="btn" id="ask">Ask</button>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="btn-export">Export transcript (Markdown)</button>
+    </div>
+    <p id="status" class="dim small" role="status"></p>
+  </section>
+</main>
+
+<footer>VAULTCHAT · YOUR DOCUMENTS NEVER LEAVE THIS BROWSER · NO ACCOUNT · NO SERVER</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="assets/chunking.js?v=1"></script>
+<script src="assets/retrieval.js?v=1"></script>
+<script src="assets/llm.js?v=1"></script>
+<script src="assets/store.js?v=1"></script>
+<script src="assets/sample-docs.js?v=1"></script>
+<script type="module" src="assets/app.js?v=1"></script>
+</body>
+</html>
